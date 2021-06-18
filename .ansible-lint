@@ -1,0 +1,9 @@
+---
+# You can configure the ansible-lint skip list here.
+# See https://docs.ansible.com/ansible-lint/rules/default_rules.html
+
+# skip_list:
+  # - 305  # Ignore use of shell module
+  # - 306  # Ignore no use of pipefail
+verbosity: 1
+...

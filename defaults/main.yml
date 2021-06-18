@@ -1,0 +1,34 @@
+---
+firewall_ufw: false
+firewall_enable_ipv6: false
+firewall_nat:
+  snat_enabled: false
+  # To enable nat
+  # snat_enabled: true
+  # wan_nic: ens192
+  # lan_subnet: 192.168.197.0/24
+  # dnat_rules:
+  #   - comment: "NAT HTTP Example"
+  #     src: 1.2.3.4
+  #     proto: tcp
+  #     dport: 80
+  #     dest: 192.168.1.1:80
+
+firewall:
+  policy: deny  # Deny incoming traffic & log
+  output_policy: allow  # allow outgoing traffic by default
+  log: true  # Log policy dropped traffic
+  rules:
+    - comment: "########### CHANGEME ########### prevent locking yourself out"
+      dst_port: 22
+    # - comment: "Example"
+    #   src_ip: any/x.x.x.x
+    #   src_port: any/xxxx
+    #   dst_ip: any/x.x.x.x
+    #   dst_port: any/xxxx
+    #   direction: in/out/forward(fw only for iptables)
+    #   policy: allow/deny
+    #   proto: tcp/udp/icmp/...
+    #   delete: no/yes (only for ufw)
+    #   nic: any/eth0/ens192
+...

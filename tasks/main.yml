@@ -1,0 +1,50 @@
+---
+- name: Merge configurations
+  set_fact:
+    fw_config:
+      "{{
+        firewall | combine(
+          firewall1|default({}),
+          firewall2|default({}),
+          firewall3|default({}),
+          firewall4|default({}),
+          recursive=True,
+          list_merge='append'
+        )
+      }}"
+  tags: always
+
+- name: Show merged configuration
+  debug:
+    msg: "{{ fw_config }}"
+  tags: always
+
+- name: UFW | setup ufw if defined
+  include_tasks:
+    file: ufw.yml
+    apply:
+      tags:
+        - ufw
+        - firewall
+  when: firewall_ufw
+  tags: always
+
+- name: IPTables | setup IPtables by default
+  include_tasks:
+    file: iptables.yml
+    apply:
+      tags:
+        - iptables
+        - firewall
+  when: not firewall_ufw
+  tags: always
+
+- name: sysctl
+  include_tasks:
+    file: sysctl.yml
+    apply:
+      tags:
+        - sysctl
+        - firewall
+  tags: always
+...

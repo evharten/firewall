@@ -1,0 +1,19 @@
+---
+# Testing playbook for molecule test, converge and syntax checking.
+
+- name: Converge
+  hosts: all
+  pre_tasks:
+    # Workaround for dnf/rpmdb_lock.pid Error
+    # https://github.com/geerlingguy/ansible-role-composer/issues/54
+    - name: Delay playbook start | get status of systemd-tmpfiles-setup  # noqa 301 303
+      when: ansible_service_mgr == 'systemd'
+      changed_when: false
+      command: systemctl status systemd-tmpfiles-setup.service
+      register: delay_status
+      until: delay_status.rc == 0
+      retries: 20
+      delay: 0
+  roles:
+    - { role: firewall, molecule_test: true }
+...

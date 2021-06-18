@@ -1,0 +1,59 @@
+---
+# These rules mostly match the default yamllint config.
+# See https://yamllint.readthedocs.io/en/stable/rules.html for explanations
+# warning level is useless https://github.com/ansible/molecule/issues/1308
+
+extends: default
+
+# Ignore virtualenv lib/ inside directory
+ignore: |
+  **/lib/
+
+rules:
+  braces:
+    max-spaces-inside: 1
+    level: error
+  brackets:
+    max-spaces-inside: 1
+    level: error
+  colons:
+    max-spaces-after: 1
+    level: error
+  commas:
+    max-spaces-after: 1
+    level: error
+  comments:
+    level: error
+  comments-indentation: disable
+  document-end: enable
+  document-start:
+    level: error
+  empty-lines:
+    max: 1
+    level: error
+  empty-values:
+    level: error
+  hyphens:
+    level: error
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+    level: error
+  key-duplicates:
+    level: error
+  line-length:
+    max: 160
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+    level: error
+  new-line-at-end-of-file: disable
+  new-lines:
+    level: error
+    type: unix
+  quoted-strings: disable
+  trailing-spaces:
+    level: error
+  truthy:
+    level: error
+    allowed-values: ['TRUE', 'True', 'true', 'FALSE', 'False', 'false', 'YES', 'Yes', 'yes', 'NO', 'No', 'no', 'ON', 'On', 'on', 'OFF', 'Off', 'off']
+...

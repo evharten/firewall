@@ -1,0 +1,12 @@
+---
+- name: restart-ufw
+  service:
+    name=ufw
+    state=restarted
+
+- name: reload ip4tables
+  shell: /sbin/iptables-restore < /etc/iptables/rules.v4
+
+- name: reload ip6tables
+  shell: /sbin/ip6tables-restore < /etc/iptables/rules.v6
+...

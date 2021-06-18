@@ -1,0 +1,59 @@
+---
+- name: install ufw packages
+  package:
+    name:
+      - iptables
+      - ufw
+    state: present
+  register: ufw_install
+  retries: 5
+  until: ufw_install is success
+  tags:
+    - install
+
+- name: NAT | set DEFAULT_FORWARD_POLICY
+  lineinfile:
+    path: /etc/default/ufw
+    regexp: '^DEFAULT_FORWARD_POLICY=.*'
+    line: >-
+      DEFAULT_FORWARD_POLICY={% if firewall_nat.snat_enabled %}"ACCEPT"{% else %}"DROP"{% endif %}
+  notify: restart-ufw
+
+- name: NAT | set ip_forward
+  lineinfile:
+    path: /etc/ufw/sysctl.conf
+    regexp: '^#*net/ipv4/ip_forward=.*'
+    line: >-
+      net/ipv4/ip_forward={% if firewall_nat.snat_enabled %}1{% else %}0{% endif %}
+  notify: restart-ufw
+
+- name: NAT | set before.rules
+  template:
+    dest: /etc/ufw/before.rules
+    src: before.rules.j2
+    mode: 0640
+  notify: restart-ufw
+
+- name: Add rules to ufw
+  ufw:
+    comment: "{{ item.comment }}"
+    rule: "{{ item.policy | default('allow') }}"
+    direction: "{{ item.direction | default('in') }}"
+    proto: "{{ item.proto | default('tcp') }}"
+    from_ip: "{{ item.src_ip | default('any') }}"
+    from_port: "{{ item.src_port | default(omit) }}"
+    to_ip: "{{ item.dst_ip | default('any') }}"
+    to_port: "{{ item.dst_port | default(omit) }}"
+    interface: "{{ item.nic | default(omit) }}"
+    delete: "{{ item.delete | default('no') }}"
+  with_items:
+    - "{{ fw_config.rules }}"
+    - "{{ firewfw_configall.rules_default }}"
+  when: item.interface is not defined
+
+- name: ensure ufw is running
+  ufw:
+    state: enabled
+    policy: "{{ fw_config.policy }}"
+    logging: "{% if fw_config.log %}on{% else %}off{% endif %}"
+...
