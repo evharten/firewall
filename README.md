@@ -38,5 +38,4 @@ GPLv2
 
 Author Information
 ------------------
-
-Wouter Moeken <wouter.moeken@rws.nl>
+Cees Moerkerken
