@@ -4,6 +4,7 @@
     fw_config:
       "{{
         firewall | combine(
+          firewall_defaults|default({}),
           firewall1|default({}),
           firewall2|default({}),
           firewall3|default({}),
@@ -17,6 +18,16 @@
 - name: Show merged configuration
   debug:
     msg: "{{ fw_config }}"
+  tags: always
+
+- name: ipset | setup ipset if defined
+  include_tasks:
+    file: ipset.yml
+    apply:
+      tags:
+        - ipset
+        - firewall
+  when: ipset_rules is defined
   tags: always
 
 - name: UFW | setup ufw if defined
@@ -36,7 +47,21 @@
       tags:
         - iptables
         - firewall
-  when: not firewall_ufw
+  when:
+    - not firewall_ufw
+    - ansible_facts['os_family'] == "Debian" # Debian 10,9,..,Ubuntu 20.04,18.04,e.t.c
+  tags: always
+
+- name: IPTables | setup IPtables by default
+  include_tasks:
+    file: iptables_rh.yml
+    apply:
+      tags:
+        - iptables
+        - firewall
+  when:
+    - not firewall_ufw
+    - ansible_facts['os_family'] == "RedHat" # CentOS 8, CentOS 7,Fedora 33, Amazon Linux 2, e.t.c
   tags: always
 
 - name: sysctl

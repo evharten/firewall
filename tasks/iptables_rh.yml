@@ -1,0 +1,97 @@
+---
+- name: IPTables | remove ufw packages
+  package:
+    name: ufw
+    state: absent
+  register: ufw_uninstall
+  retries: 5
+  until: ufw_uninstall is success
+  tags: install
+
+- name: IPTables | remove ufw configuration
+  file:
+    path: /etc/ufw
+    state: absent
+  tags: install
+
+- name: IPTables | install packages
+  package:
+    name:
+      - iptables
+      - iptables-services
+    state: present
+  register: iptables_install
+  retries: 5
+  until: iptables_install is success
+  tags: install
+
+- name: IPTables | create validate scripts
+  copy:
+    src: "iptables-validate"
+    dest: "/usr/local/bin/iptables-validate"
+    mode: 0755
+
+- name: IPTables | create rsyslog config
+  copy:
+    src: "rsyslog_iptables.conf"
+    dest: "/etc/rsyslog.d/21-iptables.conf"
+    mode: 0644
+  notify: restart rsyslog
+
+- name: IPTables | set iptables.v4 template
+  template:
+    src: rules.v4.j2
+    dest: /etc/sysconfig/iptables
+    validate: /usr/local/bin/iptables-validate %s
+    mode: 0644
+    backup: yes
+  tags: config
+  register: iptables_v4_template
+  notify:
+    - restart iptables service
+    - restart fail2ban
+
+- name: IPTables | check running ipv4 config when not changed
+  block:
+    - name: IPTables | get running config
+      shell: iptables-save | grep "^-A "
+      register: iptables_running_config
+      changed_when: false
+      check_mode: no
+
+    - name: IPTables | get saved config
+      shell: cat /etc/sysconfig/iptables | grep "^-A "
+      register: iptables_saved_config
+      changed_when: false
+      check_mode: no
+
+    - debug:
+        msg: "{{ iptables_running_config.stdout | flatten }}"
+
+    - debug:
+        msg: "{{ iptables_saved_config.stdout | flatten }}"
+
+    - name: IPTables | compare running and saved config and reload when needed
+      shell: /sbin/iptables-restore < /etc/sysconfig/iptables
+      when: iptables_running_config.stdout | flatten != iptables_saved_config.stdout | flatten
+      notify: restart fail2ban
+  when: not iptables_v4_template.changed
+
+# - name: IPTables | set iptables.v6 template
+#   template:
+#     src: rules.v6.j2
+#     dest: /etc/iptables/rules.v6
+#     mode: 0644
+#     backup: yes
+#     validate: /usr/local/bin/iptables-validate %s
+#   tags: config
+#   notify:
+#     - reload ip6tables
+
+- name: IPTables | start service & enable onboot
+  ansible.builtin.systemd:
+    name: iptables
+    state: started
+    enabled: yes
+  notify: restart fail2ban
+...

@@ -1,4 +1,7 @@
 #!/bin/bash
 
 /sbin/iptables-restore < /etc/iptables/rules.v4
+{% if firewall_nat is defined %}
+/sbin/iptables-restore < /etc/iptables/rules.v4.nat
+{% endif %}
 /sbin/ip6tables-restore < /etc/iptables/rules.v6

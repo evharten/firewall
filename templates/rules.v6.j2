@@ -4,10 +4,10 @@
 :OUTPUT ACCEPT [0:0]
 
 # Hardcoded INPUT rules
--A INPUT -i lo -j ACCEPT -m comment --comment "accept all to lo interface"
--A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT -m comment --comment "accept related and established"
+-A INPUT -i lo -m comment --comment "accept all to lo interface" -j ACCEPT
+-A INPUT -m state --state RELATED,ESTABLISHED -m comment --comment "accept related and established" -j ACCEPT
 
-{% for rule in fw_config.rules|sort(attribute="comment") %}
+{% for rule in fw_config.rulesv6|sort(attribute="comment") %}
 {% if rule.proto is defined and rule.proto == "any" %}{% set proto = 'all' %}
 {% elif rule.proto is undefined %}{% set proto = 'tcp' %}
 {% else %}{% set proto = rule.proto %}{% endif -%}
@@ -15,13 +15,13 @@
 {% if rule.direction is undefined or rule.direction == "in" %}
 -A INPUT{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
 {% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% endif %}
-{% if rule.dst_ip is defined %} -d {{ rule.dst_ip }} {% endif %}
+{% if rule.dst_ip is defined %} -d {{ rule.dst_ip }}{% endif %}
  -p {{ proto -}}
 {% if rule.dst_port is defined -%}
 {% if proto == "tcp" or proto == "udp" %} -m multiport --dports {% else %} --dport {% endif %}{{ rule.dst_port }}
 {%- endif -%}
 {% if rule.comment is defined %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT {% endif %}
+{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT{% endif %}
 
 {% elif rule.direction == "out" %}
 -A OUTPUT{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
@@ -32,7 +32,7 @@
 {% if proto == "tcp" or proto == "udp" %} -m multiport --sports {% else %} --sport {% endif %}{{ rule.src_port }}
 {%- endif -%}
 {% if rule.comment is defined %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT {% endif %}
+{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT{% endif %}
 
 {% elif rule.direction == "forward" %}
 -A FORWARD{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
@@ -46,18 +46,10 @@
 {% if proto == "tcp" or proto == "udp" %} -m multiport --sports {% else %} --sport {% endif %}{{ rule.src_port }}
 {%- endif -%}
 {% if rule.comment is defined %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT {% endif %}
+{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT{% endif %}
 
 {% endif %}
 {% endfor %}
-
-{% if firewall_nat.snat_enabled %}
-{# Allow SNAT traffic, DNAT needs it's own forward rules #}
-# Forward traffic through {{firewall_nat.wan_nic}} (SNAT)
--A FORWARD -s {{firewall_nat.lan_subnet}} -o {{firewall_nat.wan_nic}} -j ACCEPT -m comment --comment "Outgoing SNAT traffic"
--A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT -m comment --comment "accept related and established"
-
-{% endif %}
 
 
 {% if fw_config.policy is undefined or fw_config.policy == "deny" %}

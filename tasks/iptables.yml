@@ -30,7 +30,20 @@
     src: "iptables-validate"
     dest: "/usr/local/bin/iptables-validate"
     mode: 0755
-  tags: install
+
+- name: IPTables | create rsyslog config
+  copy:
+    src: "rsyslog_iptables.conf"
+    dest: "/etc/rsyslog.d/21-iptables.conf"
+    mode: 0644
+  notify: restart rsyslog
+
+- name: IPTables | create rsyslog config
+  copy:
+    src: "rsyslog_iptablesv6.conf"
+    dest: "/etc/rsyslog.d/22-iptables-v6.conf"
+    mode: 0644
+  notify: restart rsyslog
 
 - name: IPTables | create iptables config directory
   file:
@@ -45,29 +58,161 @@
 
 - name: IPTables | set iptables.v4 template
   template:
-    src: rules.v4.j2
+    src: "{{ 'rules.v4.j2' if ansible_distribution_major_version < '22' else 'rules.v4.v1.8.j2' }}"
     dest: /etc/iptables/rules.v4
     validate: /usr/local/bin/iptables-validate %s
     mode: 0644
     backup: yes
   tags: config
+  register: iptables_v4_template
   notify:
     - reload ip4tables
 
-# - name: IPTables | set iptables.v6 template
-#   template:
-#     src: rules.v6.j2
-#     dest: /etc/iptables/rules.v6
-#     mode: 0644
-#     backup: yes
-#     validate: /usr/local/bin/iptables-validate %s
-#   tags: config
-#   notify:
-#     - reload ip6tables
+- name: IPTables | set iptables.v4 nat template
+  template:
+    src: rules.v4.nat.j2
+    dest: /etc/iptables/rules.v4.nat
+    validate: /usr/local/bin/iptables-validate %s
+    mode: 0644
+    backup: yes
+  tags: config
+  register: iptables_v4_template_nat
+  notify:
+    - reload ip4tables
+  when:
+    - firewall_nat is defined
+
+- name: IPTables | check running ipv4 config when not changed and not dockerhost
+  block:
+    - name: IPTables | get running filter table
+      shell: iptables-save -t filter | grep -e "^-A "
+      register: iptables_running_config
+      changed_when: false
+      check_mode: no
+
+    - name: IPTables | get saved filter table
+      shell: cat /etc/iptables/rules.v4 | grep -e "^-A "
+      register: iptables_saved_config
+      changed_when: false
+      check_mode: no
+
+    # - name: iptables_running_config
+    #   debug:
+    #     msg: "{{ iptables_running_config.stdout }}"
+
+    # - name: iptables_saved_config
+    #   debug:
+    #     msg: "{{ iptables_saved_config.stdout }}"
+
+    - name: IPTables | compare running and saved filter table
+      ansible.utils.fact_diff:
+        before: "{{ iptables_running_config.stdout }}"
+        after: "{{ iptables_saved_config.stdout }}"
+      register: ip4tables_diff
+
+    - name: IPTables | reload filter table when needed
+      debug:
+        msg: "iptables running config is not equal to saved config"
+      when:
+        - ip4tables_diff.diff_lines | length>0
+      changed_when: true
+      notify: reload ip4tables
+  when:
+    - not iptables_v4_template.changed
+    - fw_config.dockerhost is undefined
+
+- name: IPTables | check running ipv4 nat table when not changed and not dockerhost
+  block:
+    - name: IPTables | get running nat table
+      shell: iptables-save -t nat | grep -e "^-A "
+      register: iptables_running_config_nat
+      changed_when: false
+      check_mode: no
+
+    - name: IPTables | get saved nat table
+      shell: cat /etc/iptables/rules.v4.nat | grep -e "^-A " || true
+      register: iptables_saved_config_nat
+      changed_when: false
+      check_mode: no
+
+    # - name: iptables_running_config_nat
+    #   debug:
+    #     msg: "{{ iptables_running_config_nat.stdout }}"
+
+    # - name: iptables_saved_config_nat
+    #   debug:
+    #     msg: "{{ iptables_saved_config_nat.stdout }}"
+
+    - name: IPTables | compare running and saved nat table
+      ansible.utils.fact_diff:
+        before: "{{ iptables_running_config_nat.stdout }}"
+        after: "{{ iptables_saved_config_nat.stdout }}"
+      register: ipnattables_diff
+
+    - name: IPTables | reload nat table when needed
+      debug:
+        msg: "iptables running config is not equal to saved config"
+      when:
+        - ipnattables_diff.diff_lines | length>0
+      changed_when: true
+      notify: reload ipnattables
+  when:
+    - not iptables_v4_template_nat.changed
+    - firewall_nat is defined
+    - fw_config.dockerhost is undefined
+
+- name: IPTables | set iptables.v6 template
+  template:
+    src: rules.v6.j2
+    dest: /etc/iptables/rules.v6
+    mode: 0644
+    backup: yes
+    validate: /usr/local/bin/iptables-validate %s
+  tags: config
+  register: iptables_v6_template
+  notify:
+    - reload ip6tables
+
+- name: IP6Tables | check running ipv6 config when not changed
+  block:
+    - name: IP6Tables | get running config
+      shell: ip6tables-save -t filter | grep -e "^-A "
+      register: ip6tables_running_config
+      changed_when: false
+      check_mode: no
+
+    - name: IP6Tables | get saved config
+      shell: cat /etc/iptables/rules.v6 | grep -e "^-A " || true
+      register: ip6tables_saved_config
+      changed_when: false
+      check_mode: no
+
+    # - name: ip6tables_running_config
+    #   debug:
+    #     msg: "{{ ip6tables_running_config.stdout }}"
+
+    # - name: ip6tables_saved_config
+    #   debug:
+    #     msg: "{{ ip6tables_saved_config.stdout }}"
+
+    - name: IP6Tables | compare running and saved ipv6 config
+      ansible.utils.fact_diff:
+        before: "{{ ip6tables_running_config.stdout }}"
+        after: "{{ ip6tables_saved_config.stdout }}"
+      register: ip6tables_diff
+
+    - name: IP6Tables | reload ipv6 config when needed
+      debug:
+        msg: "iptables running config is not equal to saved config"
+      when: ip6tables_diff.diff_lines | length>0
+      changed_when: true
+      notify: reload ip6tables
+
+  when: not iptables_v6_template.changed
 
 - name: IPTables | create iptables up script for network interface(s)
-  copy:
-    src: iptables
+  ansible.builtin.template:
+    src: iptables-restore.j2
     dest: /etc/network/if-up.d/iptables
     mode: 0755
 ...

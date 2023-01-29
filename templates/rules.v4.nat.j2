@@ -1,0 +1,28 @@
+{# Only load nat table when required #}
+*nat
+:PREROUTING ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+-F
+{% if fw_config.dnat_rules[0] is defined %}
+# Port Forwardings (DNAT)
+{% for natrule in fw_config.dnat_rules%}
+-A PREROUTING -i {{ firewall_nat.wan_nic }} -p {{ natrule.proto }} -m {{ natrule.proto }} --dport {{ natrule.dport }} -j DNAT --to-destination {{ natrule.dest }}{% if natrule.src is defined %} -s {{ natrule.src }}{% endif %}{% if rule.comment is defined %} -m comment --comment "{{ natrule.comment }}"{% endif %}
+
+{% endfor %}
+{% endif %}
+
+{% if fw_config.redirect_rules[0] is defined %}
+# Port Forwardings (REDIRECT)
+{% for redirrule in fw_config.redirect_rules%}
+-A PREROUTING -i {{ firewall_nat.wan_nic }} -p {{ redirrule.proto }} -m {{ redirrule.proto }} --dport {{ redirrule.dport }} -j REDIRECT --to-ports {{ redirrule.toport }}{% if rule.comment is defined %} -m comment --comment "{{ redirrule.comment }}"{% endif %}
+
+{% endfor %}
+{% endif %}
+
+{% if firewall_nat.snat_enabled %}
+{# DNAT without SNAT wont work, so you need this #}
+# Forward traffic through {{firewall_nat.wan_nic}} (SNAT)
+-A POSTROUTING -s {{firewall_nat.lan_subnet}} -o {{firewall_nat.wan_nic}} -j MASQUERADE
+{% endif %}
+
+COMMIT

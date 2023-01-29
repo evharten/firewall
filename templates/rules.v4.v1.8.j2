@@ -1,15 +1,17 @@
 *filter
 :INPUT ACCEPT [0:0]
-:FORWARD ACCEPT [0:0]
+:FORWARD DROP [0:0]
 :OUTPUT ACCEPT [0:0]
+{% if fw_config.dockerhost is defined and fw_config.dockerhost %}
 :DOCKER - [0:0]
 :DOCKER-ISOLATION-STAGE-1 - [0:0]
 :DOCKER-ISOLATION-STAGE-2 - [0:0]
 :DOCKER-USER - [0:0]
+{%- endif -%}
 -F
 # Hardcoded INPUT rules
--A INPUT -i lo -j ACCEPT -m comment --comment "accept all to lo interface"
--A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT -m comment --comment "accept related and established"
+-A INPUT -i lo -m comment --comment "accept all to lo interface" -j ACCEPT
+-A INPUT -m state --state RELATED,ESTABLISHED -m comment --comment "accept related and established" -j ACCEPT
 
 {% for rule in fw_config.rules|sort(attribute="comment") %}
 {% if rule.proto is defined and rule.proto == "any" %}{% set proto = 'all' %}
@@ -18,29 +20,29 @@
 
 {% if rule.direction is undefined or rule.direction == "in" %}
 -A INPUT{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
-{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% endif %}
+{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% if not '/' in rule.src_ip %}/32{% endif %}{% endif %}
 {% if rule.dst_ip is defined %} -d {{ rule.dst_ip }} {% endif %}
  -p {{ proto -}}
 {% if rule.dst_port is defined -%}
 {% if proto == "tcp" or proto == "udp" %} -m multiport --dports {% else %} --dport {% endif %}{{ rule.dst_port }}
 {%- endif -%}
 {% if rule.comment is defined %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT {% endif %}
+{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT{% endif %}
 
 {% elif rule.direction == "out" %}
 -A OUTPUT{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
-{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% endif %}
+{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% if not '/' in rule.src_ip %}/32{% endif %}{% endif %}
 {% if rule.dst_ip is defined %} -d {{ rule.dst_ip }} {% endif %}
  -p {{ proto -}}
 {% if rule.src_port is defined -%}
 {% if proto == "tcp" or proto == "udp" %} -m multiport --sports {% else %} --sport {% endif %}{{ rule.src_port }}
 {%- endif -%}
 {% if rule.comment is defined %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT {% endif %}
+{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT{% endif %}
 
 {% elif rule.direction == "forward" %}
 -A FORWARD{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
-{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% endif %}
+{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% if not '/' in rule.src_ip %}/32{% endif %}{% endif %}
 {% if rule.dst_ip is defined %} -d {{ rule.dst_ip }} {% endif %}
  -p {{ proto -}}
 {% if rule.dst_port is defined -%}
@@ -50,7 +52,7 @@
 {% if proto == "tcp" or proto == "udp" %} -m multiport --sports {% else %} --sport {% endif %}{{ rule.src_port }}
 {%- endif -%}
 {% if rule.comment is defined %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT {% endif %}
+{% if rule.policy is defined and rule.policy == "deny" %} -j DROP {% else %} -j ACCEPT{% endif %}
 
 {% else %}
 {% if rule.policy is defined and rule.policy == "deny" %}-A {% else %}-I {% endif %}
@@ -67,12 +69,16 @@
 {% if proto == "tcp" or proto == "udp" %} -m multiport --sports {% else %} --sport {% endif %}{{ rule.src_port }}
 {%- endif -%}
 {% if rule.comment is defined %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP
-{% elif rule.policy is defined and rule.policy != "allow" %} -J {{ rule.policy }}
-{% else %} -j ACCEPT {% endif %}
+{% if rule.policy is defined and rule.policy == "deny" -%} -j DROP
+{% elif rule.policy is defined and rule.policy != "allow" -%} -j {{ rule.policy }}
+{% else -%} -j ACCEPT{% endif %}
 
 {% endif %}
 {% endfor %}
+
+{% if fw_config.dockerhost is defined and fw_config.dockerhost %}
+-I DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+{% endif %}
 
 {% if firewall_nat is defined %}{% if firewall_nat.snat_enabled %}
 {# Allow SNAT traffic, DNAT needs it's own forward rules #}

@@ -36,7 +36,7 @@
     state=present
     sysctl_file=/etc/sysctl.conf
     reload=yes
-  when: firewall_nat.snat_enabled
+  when: firewall_nat is defined and firewall_nat.snat_enabled
 
 - name: disable ip forwarding
   sysctl:
@@ -45,5 +45,5 @@
     state=present
     sysctl_file=/etc/sysctl.conf
     reload=yes
-  when: not firewall_nat.snat_enabled
+  when: firewall_nat is not defined or (firewall_nat is defined and not firewall_nat.snat_enabled)
 ...

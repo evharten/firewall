@@ -1,0 +1,37 @@
+---
+# Derrived from https://github.com/mrlesmithjr/ansible-ipset
+# Might be nice to look into blocklists later
+
+- name: ipset | install ipset package
+  package:
+    name: ipset
+    state: present
+  register: ipset_uninstall
+  retries: 5
+  until: ipset_uninstall is success
+  tags: install, ipset
+
+- name: configure | Capturing ipset Names
+  command: ipset list -n
+  become: true
+  register: _ipset_list_names
+  changed_when: false
+  tags: ipset
+
+- name: ipset | Ensuring /etc/ipset/ Directory Exists
+  file:
+    path: "/etc/ipset/"
+    state: directory
+  tags: ipset
+
+- name: ipset | Generating ipset config
+  template:
+    src: ipsets.j2
+    dest: "/etc/ipset/ipset"
+  register: ipset_config
+  tags: ipset
+
+- name: ipset | Restoring ipset Rules
+  shell: ipset restore -exist < /etc/ipset/ipset
+  when: ipset_config.changed
+  tags: ipset

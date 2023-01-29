@@ -1,12 +1,41 @@
 ---
 - name: restart-ufw
   service:
-    name=ufw
-    state=restarted
+    name: ufw
+    state: restarted
 
-- name: reload ip4tables
+- name: ip4tables restore nat chain
+  shell: /sbin/iptables-restore < /etc/iptables/rules.v4.nat
+  listen: "reload ipnattables"
+
+- name: ip4tables restore
   shell: /sbin/iptables-restore < /etc/iptables/rules.v4
+  listen: "reload ip4tables"
+
+- name: Restart Docker
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+  when: fw_config.dockerhost
+  listen:
+    - "reload ip4tables"
+    - "reload ipnattables"
 
 - name: reload ip6tables
   shell: /sbin/ip6tables-restore < /etc/iptables/rules.v6
+
+- name: restart iptables service
+  service:
+    name: iptables
+    state: restarted
+
+- name: restart rsyslog
+  service:
+    name: rsyslog
+    state: restarted
+
+- name: restart fail2ban
+  service:
+    name: fail2ban
+    state: restarted
 ...

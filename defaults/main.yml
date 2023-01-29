@@ -1,8 +1,6 @@
 ---
 firewall_ufw: false
 firewall_enable_ipv6: false
-firewall_nat:
-  snat_enabled: false
   # To enable nat
   # snat_enabled: true
   # wan_nic: ens192
@@ -14,10 +12,11 @@ firewall_nat:
   #     dport: 80
   #     dest: 192.168.1.1:80
 
-firewall:
+firewall_defaults:
   policy: deny  # Deny incoming traffic & log
   output_policy: allow  # allow outgoing traffic by default
   log: true  # Log policy dropped traffic
+firewall:
   rules:
     - comment: "########### CHANGEME ########### prevent locking yourself out"
       dst_port: 22
@@ -31,4 +30,13 @@ firewall:
     #   proto: tcp/udp/icmp/...
     #   delete: no/yes (only for ufw)
     #   nic: any/eth0/ens192
+
+# Defines if DShield top 20 block lists should be defined from https://www.dshield.org/block.txt
+ipset_enable_dshield_block_list: false
+
+# Defines if FireHOL ip lists should be defined from http://iplists.firehol.org/
+ipset_enable_firehol_block_list: false
+
+# Defines if Spamhaus block lists should be defined from https://www.spamhaus.org/drop/
+ipset_enable_spamhaus_block_list: false
 ...
