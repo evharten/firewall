@@ -4,12 +4,29 @@
 
 - name: ipset | install ipset package
   package:
-    name: ipset
+    name:
+     - ipset
     state: present
-  register: ipset_uninstall
+  register: ipset_install
   retries: 5
-  until: ipset_uninstall is success
+  until: ipset_install is success
   tags: install, ipset
+  when:
+    - ansible_distribution == "Ubuntu"
+
+- name: ipset | install ipset persistent package ansible_distribution_major_version>18.04
+  package:
+    name:
+     - ipset-persistent
+    state: present
+  register: ipset_install
+  retries: 5
+  until: ipset_install is success
+  tags: install, ipset
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_major_version | int > 18
+
 
 - name: configure | Capturing ipset Names
   command: ipset list -n
@@ -20,18 +37,18 @@
 
 - name: ipset | Ensuring /etc/ipset/ Directory Exists
   file:
-    path: "/etc/ipset/"
+    path: "/etc/iptables/"
     state: directory
   tags: ipset
 
 - name: ipset | Generating ipset config
   template:
     src: ipsets.j2
-    dest: "/etc/ipset/ipset"
+    dest: "/etc/iptables/ipsets"
   register: ipset_config
   tags: ipset
 
 - name: ipset | Restoring ipset Rules
-  shell: ipset restore -exist < /etc/ipset/ipset
+  shell: ipset restore -exist < /etc/iptables/ipsets
   when: ipset_config.changed
   tags: ipset

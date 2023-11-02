@@ -1,22 +1,21 @@
-{% if ipset_rules is defined %}
-{%   for _ipset_rule in ipset_rules %}
+{% if ipset_rules_merged is defined %}
+{%   for _ipset_rule in ipset_rules_merged %}
 {%     if _ipset_rule['state'] == "present" %}
-{%       if _ipset_rule['name'] in _ipset_list_names['stdout_lines']|default([]) %}
+create {{ _ipset_rule['name'] }} {{ _ipset_rule['type'] }}
 create {{ _ipset_rule['name'] }}_temp {{ _ipset_rule['type'] }}
-{%         if _ipset_rule['addresses'] is defined %}
-{%           for _ipset_rule_address in _ipset_rule['addresses'] %}
+{%       if _ipset_rule['addresses'] is defined %}
+{%         for _ipset_rule_address in _ipset_rule['addresses'] %}
 add {{ _ipset_rule['name'] }}_temp {{ _ipset_rule_address }}
-{%           endfor %}
+{%         endfor %}
 swap {{ _ipset_rule['name'] }}_temp {{ _ipset_rule['name'] }}
 destroy {{ _ipset_rule['name'] }}_temp
-{%         endif %}
-{%       else %}
+{%       endif %}
+{%     else %}
 create {{ _ipset_rule['name'] }} {{ _ipset_rule['type'] }}
-{%         if _ipset_rule['addresses'] is defined %}
-{%           for _ipset_rule_address in _ipset_rule['addresses'] %}
+{%       if _ipset_rule['addresses'] is defined %}
+{%         for _ipset_rule_address in _ipset_rule['addresses'] %}
 add {{ _ipset_rule['name'] }} {{ _ipset_rule_address }}
-{%           endfor %}
-{%         endif %}
+{%         endfor %}
 {%       endif %}
 {%     endif %}
 {%   endfor %}

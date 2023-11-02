@@ -56,9 +56,14 @@
   loop_control:
     loop_var: directory_item
 
+# - name: Gather the package facts
+#   ansible.builtin.package_facts:
+#     manager: auto
+
 - name: IPTables | set iptables.v4 template
   template:
-    src: "{{ 'rules.v4.j2' if ansible_distribution_major_version < '22' else 'rules.v4.v1.8.j2' }}"
+    src: "rules.v4.v1.8.j2"
+    # src: "{{ 'rules.v4.j2' if ansible_facts.packages['iptables'][0].version < '1.8' else 'rules.v4.v1.8.j2' }}"
     dest: /etc/iptables/rules.v4
     validate: /usr/local/bin/iptables-validate %s
     mode: 0644
@@ -78,20 +83,20 @@
   tags: config
   register: iptables_v4_template_nat
   notify:
-    - reload ip4tables
+    - reload ipnattables
   when:
     - firewall_nat is defined
 
 - name: IPTables | check running ipv4 config when not changed and not dockerhost
   block:
     - name: IPTables | get running filter table
-      shell: iptables-save -t filter | grep -e "^-A "
+      shell: iptables-save -t filter | grep -e "^-A " || true
       register: iptables_running_config
       changed_when: false
       check_mode: no
 
     - name: IPTables | get saved filter table
-      shell: cat /etc/iptables/rules.v4 | grep -e "^-A "
+      shell: cat /etc/iptables/rules.v4 | grep -e "^-A " || true
       register: iptables_saved_config
       changed_when: false
       check_mode: no
@@ -124,7 +129,7 @@
 - name: IPTables | check running ipv4 nat table when not changed and not dockerhost
   block:
     - name: IPTables | get running nat table
-      shell: iptables-save -t nat | grep -e "^-A "
+      shell: iptables-save -t nat | grep -e "^-A " || true
       register: iptables_running_config_nat
       changed_when: false
       check_mode: no
@@ -176,7 +181,7 @@
 - name: IP6Tables | check running ipv6 config when not changed
   block:
     - name: IP6Tables | get running config
-      shell: ip6tables-save -t filter | grep -e "^-A "
+      shell: ip6tables-save -t filter | grep -e "^-A " || true
       register: ip6tables_running_config
       changed_when: false
       check_mode: no

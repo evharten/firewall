@@ -3,8 +3,8 @@
   set_fact:
     fw_config:
       "{{
-        firewall | combine(
-          firewall_defaults|default({}),
+        firewall_defaults|default({}) | combine(
+          firewall,
           firewall1|default({}),
           firewall2|default({}),
           firewall3|default({}),
@@ -18,7 +18,24 @@
 - name: Show merged configuration
   debug:
     msg: "{{ fw_config }}"
+  when: ipset_rules is defined
   tags: always
+
+- name: Merge ipset configurations
+  set_fact:
+    ipset_rules_merged:
+      "{{ [
+          ipset_rules,
+          ipset_rules1|default([]),
+          ipset_rules2|default([])
+        ]| community.general.lists_mergeby('name') }}"
+  when: ipset_rules is defined
+  tags: ipset
+
+- name: show merged ipset rules
+  debug:
+    msg: "{{ ipset_rules_merged }}"
+  tags: ipset
 
 - name: ipset | setup ipset if defined
   include_tasks:

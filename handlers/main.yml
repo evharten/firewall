@@ -16,7 +16,10 @@
   ansible.builtin.service:
     name: docker
     state: restarted
-  when: fw_config.dockerhost
+  when:
+    - fw_config.dockerhost is defined
+    - fw_config.dockerhost
+    - no_restart is not defined
   listen:
     - "reload ip4tables"
     - "reload ipnattables"

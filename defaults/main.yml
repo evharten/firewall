@@ -13,8 +13,9 @@ firewall_enable_ipv6: false
   #     dest: 192.168.1.1:80
 
 firewall_defaults:
-  policy: deny  # Deny incoming traffic & log
-  output_policy: allow  # allow outgoing traffic by default
+  input_policy: deny  # Deny incoming traffic & log. Not by policy! DROP = by policy
+  output_policy: ACCEPT  # allow outgoing traffic by policy
+  forward_policy: ACCEPT # allow forwarding traffic by policy
   log: true  # Log policy dropped traffic
 firewall:
   rules:
