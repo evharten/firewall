@@ -89,14 +89,14 @@
 
 - name: IPTables | check running ipv4 config when not changed and not dockerhost
   block:
-    - name: IPTables | get running filter table
-      shell: iptables-save -t filter | grep -e "^-A " || true
+    - name: IPTables | get INPUT and FORWARD from running filter table
+      shell: iptables-save -t filter | grep -e "^-A INPUT" -e "^-A FORWARD" || true
       register: iptables_running_config
       changed_when: false
       check_mode: no
 
-    - name: IPTables | get saved filter table
-      shell: cat /etc/iptables/rules.v4 | grep -e "^-A " || true
+    - name: IPTables | get INPUT and FORWARD from saved filter table
+      shell: cat /etc/iptables/rules.v4 | grep -e "^-A INPUT" -e "^-A FORWARD" || true
       register: iptables_saved_config
       changed_when: false
       check_mode: no
