@@ -9,6 +9,8 @@ If you need POSTROUTEING, PREROUTING (NAT) or FORWARD rules, don't use UFW. UFW 
 
 UFW also depends on you deleting rules you no longer need. It does not define a definitive state of your IP Tables without flushing it. So of you want to fully define your firewall with this role, use IP Tables (the default).
 
+Ipset is also supported but not documented.
+
 Role Variables
 --------------
 Firewall configuration is a merged result of the following dicts:

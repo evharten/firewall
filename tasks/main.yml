@@ -21,10 +21,27 @@
   when: ipset_rules is defined
   tags: always
 
+- name: Get ipset files
+  set_fact:
+    ipset_rules_files: "{{ ipset_rules_files | default([]) +
+          [
+            {
+              'name': item.name,
+              'type': item.type,
+              'state': item.state,
+              'addresses': lookup('ansible.builtin.file', item.file).splitlines()
+            }
+          ]
+        }}"
+  when: ipset_files is defined
+  loop: '{{ ipset_files }}'
+  tags: ipset
+
 - name: Merge ipset configurations
   set_fact:
     ipset_rules_merged:
       "{{ [
+          ipset_rules_files|default([]),
           ipset_rules,
           ipset_rules1|default([]),
           ipset_rules2|default([])
