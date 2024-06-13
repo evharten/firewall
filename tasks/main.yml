@@ -21,6 +21,24 @@
   when: ipset_rules is defined
   tags: always
 
+- name: UFW | remove ufw if not defined
+  include_tasks:
+    file: no_ufw.yml
+  when:
+    - not firewall_ufw
+    - ansible_facts['os_family'] == "Debian" # Debian 10,9,..,Ubuntu 20.04,18.04,e.t.c
+  tags: always
+
+- name: UFW | setup ufw if defined
+  include_tasks:
+    file: ufw.yml
+    apply:
+      tags:
+        - ufw
+        - firewall
+  when: firewall_ufw
+  tags: always
+
 - name: Get ipset files
   set_fact:
     ipset_rules_files: "{{ ipset_rules_files | default([]) +
@@ -63,16 +81,6 @@
         - ipset
         - firewall
   when: ipset_rules is defined
-  tags: always
-
-- name: UFW | setup ufw if defined
-  include_tasks:
-    file: ufw.yml
-    apply:
-      tags:
-        - ufw
-        - firewall
-  when: firewall_ufw
   tags: always
 
 - name: IPTables | setup IPtables by default

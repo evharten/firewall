@@ -1,0 +1,15 @@
+---
+- name: UFW | remove ufw packages
+  package:
+    name: ufw
+    state: absent
+  register: ufw_uninstall
+  retries: 5
+  until: ufw_uninstall is success
+  tags: install
+
+- name: UFW | remove ufw configuration
+  file:
+    path: /etc/ufw
+    state: absent
+  tags: install
