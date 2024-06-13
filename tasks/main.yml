@@ -40,13 +40,11 @@
 - name: Merge ipset configurations
   set_fact:
     ipset_rules_merged:
-      "{{ list1 | community.general.lists_mergeby(
-                    ipset_rules_files|default([]),
+      "{{ ipset_rules_files|default([]) | community.general.lists_mergeby(
                     ipset_rules,
                     ipset_rules1|default([]),
                     ipset_rules2|default([]),
                     'name',
-                    recursive=True,
                     list_merge='append'
                  ) }}"
   when: ipset_rules is defined
