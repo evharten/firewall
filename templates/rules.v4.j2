@@ -103,8 +103,8 @@ COMMIT
 {% if firewall_nat is defined %}{% if firewall_nat.snat_enabled %}
 {# Allow SNAT traffic, DNAT needs it's own forward rules #}
 # Forward traffic through {{firewall_nat.wan_nic}} (SNAT)
--A FORWARD -s {{firewall_nat.lan_subnet}} -o {{firewall_nat.wan_nic}} -j ACCEPT -m comment --comment "Outgoing SNAT traffic"
--A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT -m comment --comment "accept related and established"
+-A FORWARD -s {{firewall_nat.lan_subnet}} -o {{firewall_nat.wan_nic}} -m comment --comment "Outgoing SNAT traffic" -j ACCEPT
+-A FORWARD -m state --state RELATED,ESTABLISHED -m comment --comment "accept related and established" -j ACCEPT
 
 {% endif %}{% endif %}
 
