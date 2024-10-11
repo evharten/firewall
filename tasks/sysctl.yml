@@ -1,30 +1,49 @@
 ---
+- name: set default interfaces
+  ansible.builtin.set_fact:
+    interfaces:
+      - "all"
+      - "default"
+      - "lo"
+  tags:
+    - ipv6
+
+- name: gather instance interfaces
+  ansible.builtin.set_fact:
+    interfaces: "{{ interfaces + [ item ] }}"
+  with_items:
+    "{{ ansible_interfaces }}"
+  when:
+    - item is match("eth*") or item is match("ens*")
+  tags:
+    - ipv6
+
+- name: show interfaces
+  ansible.builtin.debug:
+    var: interfaces
+  tags:
+    - ipv6
+
 - name: disable IPv6
   sysctl:
-    name={{ item }}
+    name=net.ipv6.conf.{{ item }}.disable_ipv6
     value=1
     state=present
     sysctl_file=/etc/sysctl.conf
     reload=yes
-  with_items:
-    - "net.ipv6.conf.all.disable_ipv6"
-    - "net.ipv6.conf.default.disable_ipv6"
-    - "net.ipv6.conf.lo.disable_ipv6"
+  with_items: "{{ interfaces }}"
   when: not firewall_enable_ipv6
   tags:
     - ipv6
 
 - name: enable IPv6
   sysctl:
-    name={{ item }}
+    name=net.ipv6.conf.{{ item }}.disable_ipv6
     value=0
     state=present
     sysctl_file=/etc/sysctl.conf
     reload=yes
-  with_items:
-    - "net.ipv6.conf.all.disable_ipv6"
-    - "net.ipv6.conf.default.disable_ipv6"
-    - "net.ipv6.conf.lo.disable_ipv6"
+  with_items: "{{ interfaces }}"
   when: firewall_enable_ipv6
   tags:
     - ipv6
