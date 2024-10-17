@@ -1,13 +1,26 @@
 *filter
+{% if fw_config.input_policy == "DROP" %}
+:INPUT DROP [0:0]
+{% else %}
 :INPUT ACCEPT [0:0]
+{% endif -%}
+{% if fw_config.forward_policy == "DROP" %}
+:FORWARD DROP [0:0]
+{% else %}
 :FORWARD ACCEPT [0:0]
+{% endif -%}
+{% if fw_config.output_policy == "DROP" %}
+:OUTPUT DROP [0:0]
+{% else %}
 :OUTPUT ACCEPT [0:0]
+{% endif -%}
+
 {% if fw_config.chains is defined %}
 {% for chain in fw_config.chains %}
 {{ chain }}
 {% endfor %}
 {%- endif -%}
-
+-F
 # Hardcoded INPUT rules
 -A INPUT -i lo -m comment --comment "accept all to lo interface" -j ACCEPT
 -A INPUT -m state --state RELATED,ESTABLISHED -m comment --comment "accept related and established" -j ACCEPT
@@ -17,37 +30,16 @@
 {% elif rule.proto is undefined %}{% set proto = 'tcp' %}
 {% else %}{% set proto = rule.proto %}{% endif -%}
 
-{% if rule.direction is undefined or rule.direction == "in" %}
--A INPUT{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
-{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% endif %}
-{% if rule.dst_ip is defined %} -d {{ rule.dst_ip }}{% endif %}
- -p {{ proto -}}
-{% if rule.dst_port is defined -%}
-{% if proto == "tcp" or proto == "udp" %} -m multiport --dports {% else %} --dport {% endif %}{{ rule.dst_port }}
-{%- endif -%}
-{% if rule.comment|length %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP
-{% elif rule.policy is defined and rule.policy != "allow" %} -j {{ rule.policy }}
-{% else %} -j ACCEPT{% endif %}
+{% if rule.direction is undefined or rule.direction == "in" %}{% set chain = 'INPUT' %}
+{% elif rule.direction == "out" %}{% set chain = 'OUTPUT' %}
+{% else %}{% set chain = rule.direction %}{% endif -%}
 
-{% elif rule.direction == "out" %}
--A OUTPUT{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
-{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% endif %}
-{% if rule.dst_ip is defined %} -d {{ rule.dst_ip }} {% endif %}
+-A {{ chain }}{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
+{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% if not '/' in rule.src_ip %}/32{% endif %}{% endif %}
+{% if rule.dst_ip is defined %} -d {{ rule.dst_ip }}{% if not '/' in rule.dst_ip %}/32{% endif %}{% endif %}
  -p {{ proto -}}
-{% if rule.src_port is defined -%}
-{% if proto == "tcp" or proto == "udp" %} -m multiport --sports {% else %} --sport {% endif %}{{ rule.src_port }}
-{%- endif -%}
-{% if rule.comment|length %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP
-{% elif rule.policy is defined and rule.policy != "allow" %} -j {{ rule.policy }}
-{% else %} -j ACCEPT{% endif %}
-
-{% elif rule.direction == "forward" %}
--A FORWARD{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
-{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% endif %}
-{% if rule.dst_ip is defined %} -d {{ rule.dst_ip }} {% endif %}
- -p {{ proto -}}
+{% if rule.src_set is defined %} -m set --match-set {{ rule.src_set }} src{% endif %}
+{% if rule.dst_set is defined %} -m set --match-set {{ rule.dst_set }} dst{% endif %}
 {% if rule.dst_port is defined -%}
 {% if proto == "tcp" or proto == "udp" %} -m multiport --dports {% else %} --dport {% endif %}{{ rule.dst_port }}
 {%- endif -%}
@@ -59,43 +51,26 @@
 {% elif rule.policy is defined and rule.policy != "allow" %} -j {{ rule.policy }}
 {% else %} -j ACCEPT{% endif %}
 
-{% else %}
--A {{ rule.direction }}{% if rule.nic is defined %} -i {{ rule.nic }}{% endif %}
-{% if rule.src_ip is defined %} -s {{ rule.src_ip }}{% endif %}
-{% if rule.dst_ip is defined %} -d {{ rule.dst_ip }} {% endif %}
- -p {{ proto -}}
-{% if rule.dst_port is defined -%}
-{% if proto == "tcp" or proto == "udp" %} -m multiport --dports {% else %} --dport {% endif %}{{ rule.dst_port }}
-{%- endif -%}
-{% if rule.src_port is defined -%}
-{% if proto == "tcp" or proto == "udp" %} -m multiport --sports {% else %} --sport {% endif %}{{ rule.src_port }}
-{%- endif -%}
-{% if rule.comment|length %} -m comment --comment "{{ rule.comment }}"{% endif %}
-{% if rule.policy is defined and rule.policy == "deny" %} -j DROP
-{% elif rule.policy is defined and rule.policy != "allow" %} -j {{ rule.policy }}
-{% else %} -j ACCEPT {% endif %}
-
-{% endif %}
 {% endfor %}
 
 
 {% if fw_config.input_policy == "DROP" or fw_config.input_policy == "deny" %}
-{% if fw_config.log is undefined or fw_config.log %}
--A INPUT -j LOG --log-prefix "iptables-v6:INPUT:DROP "
+{% if fw_config.log %}
+-A INPUT -j LOG --log-prefix "iptables:INPUT:DROP "
 {% endif %}
 -A INPUT -j DROP
 {% endif %}
 
 {% if fw_config.forward_policy == "DROP" or fw_config.forward_policy == "deny" %}
 {% if fw_config.log %}
--A FORWARD -j LOG --log-prefix "iptables-v6:FORWARD:DROP "
+-A FORWARD -j LOG --log-prefix "iptables:FORWARD:DROP "
 {% endif %}
 -A FORWARD -j DROP
 {% endif %}
 
 {% if fw_config.output_policy == "DROP" or fw_config.output_policy == "deny" %}
 {% if fw_config.log %}
--A OUTPUT -j LOG --log-prefix "iptables-v6:OUTPUT:DROP "
+-A OUTPUT -j LOG --log-prefix "iptables:OUTPUT:DROP "
 {% endif %}
 -A OUTPUT -j DROP
 {% endif %}

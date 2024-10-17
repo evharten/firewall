@@ -47,8 +47,7 @@
 
 - name: IPTables | set iptables.v4 template
   template:
-    src: "rules.v4.v1.8.j2"
-    # src: "{{ 'rules.v4.j2' if ansible_facts.packages['iptables'][0].version < '1.8' else 'rules.v4.v1.8.j2' }}"
+    src: "rules.v4.j2"
     dest: /etc/iptables/rules.v4
     validate: /usr/local/bin/iptables-validate %s
     mode: 0644
