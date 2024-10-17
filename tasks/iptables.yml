@@ -12,9 +12,12 @@
 
 - name: IPTables | create validate scripts
   copy:
-    src: "iptables-validate"
-    dest: "/usr/local/bin/iptables-validate"
+    src: "{{item}}"
+    dest: "/usr/local/bin/{{item}}"
     mode: 0755
+  with_items:
+    - iptables-validate
+    - ip6tables-validate
 
 - name: IPTables | create rsyslog config
   copy:

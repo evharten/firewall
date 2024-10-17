@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/sbin/ip6tables-restore -t < $1
