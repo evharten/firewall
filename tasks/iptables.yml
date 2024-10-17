@@ -159,7 +159,7 @@
     dest: /etc/iptables/rules.v6
     mode: 0644
     backup: yes
-    validate: /usr/local/bin/iptables-validate %s
+    validate: /usr/local/bin/ip6tables-validate %s
   tags: config
   register: iptables_v6_template
   notify:
