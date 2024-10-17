@@ -71,7 +71,7 @@
 - name: show merged ipset rules
   debug:
     msg: "{{ ipset_rules_merged }}"
-  tags: ipset
+  tags: [ never, debug ]
 
 - name: ipset | setup ipset if defined
   include_tasks:
