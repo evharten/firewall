@@ -56,21 +56,21 @@
 
 {% if fw_config.input_policy == "DROP" or fw_config.input_policy == "deny" %}
 {% if fw_config.log %}
--A INPUT -j LOG --log-prefix "iptables:INPUT:DROP "
+-A INPUT -j LOG --log-prefix "iptables-v6:INPUT:DROP "
 {% endif %}
 -A INPUT -j DROP
 {% endif %}
 
 {% if fw_config.forward_policy == "DROP" or fw_config.forward_policy == "deny" %}
 {% if fw_config.log %}
--A FORWARD -j LOG --log-prefix "iptables:FORWARD:DROP "
+-A FORWARD -j LOG --log-prefix "iptables-v6:FORWARD:DROP "
 {% endif %}
 -A FORWARD -j DROP
 {% endif %}
 
 {% if fw_config.output_policy == "DROP" or fw_config.output_policy == "deny" %}
 {% if fw_config.log %}
--A OUTPUT -j LOG --log-prefix "iptables:OUTPUT:DROP "
+-A OUTPUT -j LOG --log-prefix "iptables-v6:OUTPUT:DROP "
 {% endif %}
 -A OUTPUT -j DROP
 {% endif %}
