@@ -15,6 +15,16 @@
 :OUTPUT ACCEPT [0:0]
 {% endif -%}
 
+{% if fw_config.dockerhost is defined and fw_config.dockerhost %}
+:DOCKER - [0:0]
+:DOCKER-BRIDGE - [0:0]
+:DOCKER-CT - [0:0]
+:DOCKER-FORWARD - [0:0]
+:DOCKER-ISOLATION-STAGE-1 - [0:0]
+:DOCKER-ISOLATION-STAGE-2 - [0:0]
+:DOCKER-USER - [0:0]
+{%- endif -%}
+
 {% if fw_config.chains is defined %}
 {% for chain in fw_config.chains %}
 {{ chain }}
@@ -52,6 +62,15 @@
 {% else %} -j ACCEPT{% endif %}
 
 {% endfor %}
+
+{% if fw_config.dockerhost is defined and fw_config.dockerhost %}
+-A FORWARD -j DOCKER-USER
+-A FORWARD -j DOCKER-FORWARD
+-A DOCKER-FORWARD -j DOCKER-CT
+-A DOCKER-FORWARD -j DOCKER-ISOLATION-STAGE-1
+-A DOCKER-FORWARD -j DOCKER-BRIDGE
+-A DOCKER-USER -j RETURN
+{% endif %}
 
 
 {% if fw_config.input_policy == "DROP" or fw_config.input_policy == "deny" %}
